@@ -57,7 +57,7 @@ func calculateAge(inputBirthDate time.Time) int {
 	// then the user is still 19 until the next day. On the other hand, if the 
 	// user is born on 1/19/2006, the user is 20".
 	// Also leap years
-	if currentTime.Month() < inputBirthDate.Month() || (inputBirthDate.Month() == currentTime.Month() && currentTime.Day() < currentTime.Day()){
+	if currentTime.Month() < inputBirthDate.Month() || (inputBirthDate.Month() == currentTime.Month() && currentTime.Day() < inputBirthDate.Day()){
 		age--;
 	}
 
