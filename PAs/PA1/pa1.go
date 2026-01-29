@@ -55,8 +55,9 @@ func calculateAge(inputBirthDate time.Time) int {
 
 	// "For example, if today is 1/20/2026 and the user is born on 1/21/2006, 
 	// then the user is still 19 until the next day. On the other hand, if the 
-	// user is born on 1/19/2006, the user is 20"
-	if (currentTime.YearDay() < inputBirthDate.YearDay()){
+	// user is born on 1/19/2006, the user is 20".
+	// Also leap years
+	if currentTime.Month() < inputBirthDate.Month() || (inputBirthDate.Month() == currentTime.Month() && currentTime.Day() < currentTime.Day()){
 		age--;
 	}
 
@@ -146,7 +147,6 @@ func main() {
 
 	// output info
 	fmt.Printf("\n%s, you are %d years old\n", name, userAge);
-	fmt.Printf("You are an: %s\n", zodiacSign);
+	fmt.Printf("You are a: %s\n", zodiacSign);
 	fmt.Printf("Fortune Message: \n %s\n\n", randomFortuneMessage);
-
 }
