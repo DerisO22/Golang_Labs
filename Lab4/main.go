@@ -52,6 +52,8 @@ func getUserInput() {
 	// using code 3 from lab 2
 	reader := bufio.NewReader(os.Stdin);
 
+	studentInfo = make(map[string]StudentStruct);
+
 	for i := 0; i < NUM_OF_STUDENTS; i++ {
 		fmt.Print("\nWhat is your name?: ");
 		nameInput, err := reader.ReadString('\n');
@@ -134,8 +136,6 @@ func getUserInput() {
 				fmt.Println("Invalid GPA Input\n");
 			}
 		}
-		
-		studentInfo = make(map[string]StudentStruct);
 
 		studentID := fmt.Sprintf("%08.2f", float32(i + 1));
 
