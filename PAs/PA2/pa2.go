@@ -161,6 +161,7 @@ func main() {
 	fmt.Println("contains the word ant", search(root, "ant"));
 	fmt.Println("contains the word antler", search(root, "antler"));
 
+	// the 't' will be deleted for this one
 	remove(root, "cart");
 	fmt.Println("\nTest 2:");
 	fmt.Println("contains the word cart", search(root, "cart"));
