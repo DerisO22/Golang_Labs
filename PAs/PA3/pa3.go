@@ -33,7 +33,7 @@ type AdvisorInfo struct {
 
 const USER = "root"
 const PASSWD = "Deris123" // put in your password here
-const DATABASE = "pa3"
+const DATABASE = "advising"
 const CONNECTION = "tcp"
 const HOST = "127.0.0.1"
 const PORT = "3306"
@@ -238,6 +238,7 @@ func searchAdviseeByName(db *sql.DB, name string) error {
 }
 
 func deleteARecord(db *sql.DB, name string) error {
+	// This will prob need some sort of join cus of the foreign key relationship. Or just add ON DELETE CASCADE
 	query := "DELETE FROM person WHERE name = ?";
 
 	// Execute the query using db.Exec()
