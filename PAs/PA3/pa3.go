@@ -113,7 +113,7 @@ func insertNewRecord(db *sql.DB) (int64, error) {
 	fmt.Print("Enter advisor name?: ");
 	nameInput, err := reader.ReadString('\n');
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err);
 	}
 	newAdvisor.name = strings.TrimSpace(nameInput);
 
@@ -188,7 +188,7 @@ func insertNewRecord(db *sql.DB) (int64, error) {
 		return 0, fmt.Errorf("Error Inserting a New Advisor: %v", advisorErr);
 	}
 
-	id, advisorErr := advisorResult.LastInsertId()
+	id, advisorErr := advisorResult.LastInsertId();
 	if advisorErr != nil {
 		return 0, fmt.Errorf("Error Inserting a New Advisor: %v", advisorErr);
 	}
@@ -206,28 +206,28 @@ func searchAdviseeByName(db *sql.DB, name string) error {
 	var advisors []Advisor;
 	var tmp Advisor;
 
-	rows, err := db.Query("SELECT * FROM person WHERE name = ?", name)
+	rows, err := db.Query("SELECT * FROM person WHERE name = ?", name);
 	if err != nil {
-		return fmt.Errorf("AdviseeByName %q: %v", name, err)
+		return fmt.Errorf("AdviseeByName %q: %v", name, err);
 	}
-	defer rows.Close()
+	defer rows.Close();
 
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
-		err := rows.Scan(&tmp.id, &tmp.name, &tmp.dob, &tmp.email, &tmp.phone,)
+		err := rows.Scan(&tmp.id, &tmp.name, &tmp.dob, &tmp.email, &tmp.phone);
 
 		if err != nil {
-			return fmt.Errorf("AdviseeByName %q: %v", name, err)
+			return fmt.Errorf("AdviseeByName %q: %v", name, err);
 		}
-		advisors = append(advisors, tmp)
+		advisors = append(advisors, tmp);
 	}
 
-	err = rows.Err()
+	err = rows.Err();
 
 	if err != nil {
-		return fmt.Errorf("AdviseeByName %q: %v", name, err)
+		return fmt.Errorf("AdviseeByName %q: %v", name, err);
 	} else {
-		i := 1
+		i := 1;
 		for _, value := range advisors {
 			fmt.Printf("%-3d %-20s %-20s %-20s %-20s\n", i, value.name, value.dob, value.email, value.phone);
 			i++
@@ -235,6 +235,27 @@ func searchAdviseeByName(db *sql.DB, name string) error {
 	}
 
 	return nil
+}
+
+func deleteARecord(db *sql.DB, name string) error {
+	query := "DELETE FROM person WHERE name = ?";
+
+	// Execute the query using db.Exec()
+	result, err := db.Exec(query, name);
+
+	if err != nil {
+		return err;
+	}
+
+	// Optional: Check how many rows were affected
+	rowsAffected, err := result.RowsAffected();
+	if err != nil {
+		return fmt.Errorf("Could not get rows affected: %v\n", err);
+	}
+
+	fmt.Printf("Deleted %d row(s)\n", rowsAffected);
+
+	return fmt.Errorf("");
 }
 
 func main() {
@@ -254,14 +275,20 @@ func main() {
 	fmt.Printf("Searching for Advisor - %s:\n", nameToSearch)
 	err := searchAdviseeByName(db, nameToSearch);
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err);
 	}
 
-	id, err := insertNewRecord(db)
+	id, err := insertNewRecord(db);
 
 	if err != nil {
-		fmt.Println("Added a New Record with id = ", id)
+		fmt.Println("Added a New Record with id = ", id);
 	} else {
 		fmt.Println("Error in Adding a New Record");
+	}
+
+	deleteErr := deleteARecord(db, "Deris");
+
+	if deleteErr != nil {
+		fmt.Println("Deleted Record with name = Deris");
 	}
 }
