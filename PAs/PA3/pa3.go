@@ -237,12 +237,12 @@ func searchAdviseeByName(db *sql.DB, name string) error {
 	return nil
 }
 
-func deleteARecord(db *sql.DB, name string) error {
-	// This will prob need some sort of join cus of the foreign key relationship. Or just add ON DELETE CASCADE
-	query := "DELETE FROM person WHERE name = ?";
+func deleteARecord(db *sql.DB, id int64) error {
+	delete_student_query := "DELETE FROM student WHERE id = ?";
+	delete_person_query := "DELETE FROM person WHERE id = ?"
 
-	// Execute the query using db.Exec()
-	result, err := db.Exec(query, name);
+	_, err := db.Exec(delete_student_query, id);
+	result, err := db.Exec(delete_person_query, id);
 
 	if err != nil {
 		return err;
@@ -287,7 +287,7 @@ func main() {
 		fmt.Println("Error in Adding a New Record");
 	}
 
-	deleteErr := deleteARecord(db, "Deris");
+	deleteErr := deleteARecord(db, 4);
 
 	if deleteErr != nil {
 		fmt.Println("Deleted Record with name = Deris");
