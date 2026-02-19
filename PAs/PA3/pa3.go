@@ -292,4 +292,7 @@ func main() {
 	if deleteErr != nil {
 		fmt.Println("Deleted Record with name = Deris");
 	}
+
+	fmt.Println("\nAll Advisor and Their Student Information:");
+	displayAllRecords(db);
 }
