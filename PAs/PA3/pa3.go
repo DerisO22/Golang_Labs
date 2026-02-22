@@ -1,5 +1,28 @@
 package main
 
+/*
+Author:                   Deris C. O’Malley
+Class:                    CSI-380-01
+Assignment:               PA 3
+Date Assigned:            16, February
+Due Date:                 23, February, 11:00AM
+
+Description:
+This program utilizes CRUD operations for managing students
+and advisors.
+
+Certification of Authenticity:
+I certify that this is entirely my own work,except where I have given fully-documented
+References to the work of others. I understand the definition and consequences of
+Plagiarism and acknowledge that the assessor of this assignment may, for the purpose
+of assessing this assignment:
+-Reproduce this assignment and provide a copy to another member of academic staff;
+and/or
+- Communicate a copy of this assignment to a plagiarism checking service (which
+May then retain a copy of this assignment on its database for the purpose of future
+Plagiarism checking)
+*/
+
 import (
 	"bufio"
 	"database/sql"
@@ -314,9 +337,9 @@ func main() {
 	deleteErr := deleteARecord(db);
 
 	if deleteErr != nil {
-		fmt.Println("Error deleting record")
+		fmt.Println("Error deleting record");
 	} else {
-		fmt.Println("Successfully deleted record")
+		fmt.Println("Successfully deleted record");
 	}
 
 	fmt.Println("\nAll Advisor and Their Student Information after CR(U)D Operations:");
