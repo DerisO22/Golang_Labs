@@ -207,9 +207,15 @@ func insertNewRecord(db *sql.DB) (string, error) {
 	fmt.Println("");
 	fmt.Println(newAdvisor);
 
-	_, advisorErr := db.Exec("INSERT INTO person (id, name, dob, email, phone) VALUES (?, ?, ?, ?, ?);", newAdvisor.id, newAdvisor.name, newAdvisor.dob, newAdvisor.email, newAdvisor.phone);
+	transaction, err := db.Begin();
+	if err != nil {
+		return "", fmt.Errorf("insertNewRecord: begin transaction: %v", err)
+	}
+
+	_, advisorErr := transaction.Exec("INSERT INTO person (id, name, dob, email, phone) VALUES (?, ?, ?, ?, ?);", newAdvisor.id, newAdvisor.name, newAdvisor.dob, newAdvisor.email, newAdvisor.phone);
 	
 	if advisorErr != nil {
+		transaction.Rollback();
 		return "0", fmt.Errorf("Error Inserting a New Advisor: %v", advisorErr);
 	}
 
@@ -221,11 +227,14 @@ func insertNewRecord(db *sql.DB) (string, error) {
 	}
 	*/
 
-	_, studentErr := db.Exec("INSERT INTO student (id, major, gpa, class) VALUES (?, ?, ?, ?)", newAdvisor.id, newAdvisor.major, newAdvisor.gpa, newAdvisor.class);
+	_, studentErr := transaction.Exec("INSERT INTO student (id, major, gpa, class) VALUES (?, ?, ?, ?)", newAdvisor.id, newAdvisor.major, newAdvisor.gpa, newAdvisor.class);
 
 	if studentErr != nil {
+		transaction.Rollback();
 		return "0", fmt.Errorf("Error Inserting a New Student: %v", studentErr);
 	}
+
+	transaction.Commit();
 
 	return newAdvisor.id, nil;
 }
@@ -235,7 +244,7 @@ func searchAdviseeByName(db *sql.DB) error {
 	var tmp Advisor;
 
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter name to search for?: ")
+	fmt.Print("\nEnter name to search for?: ")
 	
 	nameToSearch, _ := reader.ReadString('\n')
 	nameToSearch = strings.TrimSpace(nameToSearch)
@@ -283,18 +292,27 @@ func deleteARecord(db *sql.DB) error {
 	}
 	idInput = strings.TrimSpace(idInput);
 
-	delete_student_query := "DELETE FROM student WHERE id = ?";
-	delete_person_query := "DELETE FROM person WHERE id = ?"
-
-	_, err := db.Exec(delete_student_query, idInput)
+	transaction, err := db.Begin();
 	if err != nil {
-		return err
+		return fmt.Errorf("deleteARecord: begin transaction: %v", err);
 	}
-	result, err := db.Exec(delete_person_query, idInput)
 
+	delete_student_query := "DELETE FROM student WHERE id = ?";
+	delete_person_query := "DELETE FROM person WHERE id = ?";
+
+	_, err = transaction.Exec(delete_student_query, idInput);
 	if err != nil {
+		transaction.Rollback();
 		return err;
 	}
+	result, err := transaction.Exec(delete_person_query, idInput);
+
+	if err != nil {
+		transaction.Rollback();
+		return err;
+	}
+
+	transaction.Commit();
 
 	// Optional: Check how many rows were affected
 	rowsAffected, err := result.RowsAffected();
