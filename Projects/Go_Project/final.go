@@ -82,12 +82,18 @@ func connectToADatabase() (bool, *sql.DB) {
 }
 
 func createDatabase(db *sql.DB) {
+	// I added the IF NOT EXISTS to prevent errors
 	_, err := db.Exec("CREATE DATABASE IF NOT EXISTS coursesList");
 	if err != nil {
 		fmt.Println("Create Database Error: ", err)
 	}
 
     _, err = db.Exec("USE coursesList");
+
+	_, err = db.Exec("DROP TABLE IF EXISTS courses;")
+	if err != nil {
+		fmt.Println("Error dropping table: ", err)
+	}
 
 	createTableQuery := `
 	CREATE TABLE courses (
@@ -125,9 +131,8 @@ func loadAllDataToDatabase(coursesData Semester, db *sql.DB) {
 	insertQuery := `INSERT INTO courses (number, credit, openSeats, days, times, instructorFname, instructorLname, description, room, subject, courseType, prereq, title, startDate, endDate)
 					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+	// semester.children has the courses
 	for _, course := range coursesData.Children {
-		fmt.Println(course.Title);
-
 		_, err = transaction.Exec(insertQuery,
 			course.Number, course.Credit, course.Openseats, course.Days, course.Times, course.Instructor_fname, course.Instructor_lname,
 			course.Description, course.Room, course.Subject, course.Type, course.Prereq, course.Title, course.Start_date, course.End_date);
@@ -141,46 +146,11 @@ func loadAllDataToDatabase(coursesData Semester, db *sql.DB) {
 
 	err = transaction.Commit()
 	if err != nil {
-		fmt.Printf("Error committing transaction: %v\n", err)
+		fmt.Printf("Error committing transaction: %v\n", err);
 	} else {
-		fmt.Println("Successfully saved all courses!")
+		fmt.Println("Successfully saved all courses!");
 	}
 }
-
-// func displayAllFallCourses(db *sql.DB) error {
-// 	var Semesters []Semester;
-// 	var tmp AdvisorInfo;
-// 	var studentID string;
-
-// 	rows, err := db.Query("SELECT * FROM person JOIN student ON person.id=student.id;");
-// 	if err != nil {
-// 		return fmt.Errorf("displayAllRecords: %v", err)
-// 	}
-
-// 	defer rows.Close()
-	
-// 	// Loop through rows, using Scan to assign column data to struct fields.
-// 	for rows.Next() {
-// 		err = rows.Scan(&tmp.id, &tmp.name, &tmp.dob, &tmp.email, &tmp.phone, &studentID, &tmp.major, &tmp.gpa, &tmp.class);
-// 		if err != nil {
-// 			return fmt.Errorf("displayAllRecords: %v", err)
-// 		}
-// 		advisors = append(advisors, tmp)
-// 	}
-// 	err = rows.Err()
-
-// 	if err != nil {
-// 		return fmt.Errorf("displayAllRecords: %v", err)
-// 	} else {
-// 		i := 1
-// 		for _, value := range advisors {
-// 			fmt.Printf("%-3d %-20s %-20s %-20s %-20s %-20s %6.3f %-65s \n", i, value.name, value.dob, value.email, value.phone, value.major, value.gpa, value.class);
-// 			i++
-// 		}
-// 	}
-
-// 	return nil;
-// }
 
 func fetchCourseList(URL string) DataObject {
 	// Make an HTTP GET request
@@ -206,12 +176,206 @@ func fetchCourseList(URL string) DataObject {
 	return data;
 }
 
+// Help function, so I don't need to repeat the row iteration for each search func
+func printCourses(rows *sql.Rows) {
+	defer rows.Close()
+	var courses []Course
+
+	// Loop through rows, using Scan to assign column data to struct fields.
+	for rows.Next() {
+		var tmp Course
+		err := rows.Scan(&tmp.Number, &tmp.Days, &tmp.Times, &tmp.Room, &tmp.Instructor_fname, &tmp.Instructor_lname, &tmp.Openseats)
+		if err != nil {
+			fmt.Printf("Scan error: %v\n", err)
+			return
+		}
+		courses = append(courses, tmp)
+	}
+
+	if len(courses) == 0 {
+		fmt.Println("No courses found.")
+		return
+	}
+
+	// col headers. but will prob not be seen
+	fmt.Printf("\n%-10s %-8s %-20s %-15s %-25s %-5s\n", "NUMBER", "DAYS", "TIME", "ROOM", "INSTRUCTOR", "SEATS")
+	for _, c := range courses {
+		name := c.Instructor_fname + " " + c.Instructor_lname
+		fmt.Printf("%-10s %-8s %-20s %-15s %-25s %-5s\n", c.Number, c.Days, c.Times, c.Room, name, c.Openseats)
+	}
+}
+
+
+/*
+	All the User Operations
+*/
+func displayFallCourses(userInput int, db *sql.DB) error {
+	var query string
+
+	fmt.Println("\nAll Fall Courses:\n");
+
+	switch(userInput){
+		case 1:
+			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses;"
+			break;
+		case 2:
+			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE courseType = 'Day/Evening';"
+			break;
+		case 3:
+			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE courseType != 'Day/Evening';";
+			break;
+	}
+
+	rows, err := db.Query(query);
+	if err != nil {
+		return fmt.Errorf("displayFallCourses: %v", err);
+	}
+
+	printCourses(rows);
+
+	return nil;
+}
+
+func searchByCoursePrefix(db *sql.DB) {
+	var prefixToSearch string
+	fmt.Print("\nEnter a course-prefix to search (CSI, MTH, etc)?: ");
+	
+	fmt.Scan(&prefixToSearch)
+
+	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
+	rows, err := db.Query(query, prefixToSearch + "%");
+	if err != nil {
+		fmt.Printf("courseByPrefix %q: %v", prefixToSearch, err);
+		return;
+	}
+	
+	printCourses(rows);
+}
+
+func searchByLevel(db *sql.DB) {
+	var levelToSearch string
+	fmt.Print("\nEnter a course-level to search (1xx, 2xx, etc)?: ");
+	
+	fmt.Scan(&levelToSearch)
+
+	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
+	rows, err := db.Query(query, "%-" + levelToSearch + "%");
+	if err != nil {
+		fmt.Printf("courseByLevel %q: %v", levelToSearch, err);
+		return;
+	}
+	
+	printCourses(rows);
+}
+
+func searchByPrefixAndLevel(db *sql.DB) {
+	var prefixToSearch string
+	var levelToSearch string
+
+	fmt.Print("Enter Prefix (e.g. CSI): ")
+	fmt.Scan(&prefixToSearch)
+
+	fmt.Print("Enter Level (e.g. 300): ")
+	fmt.Scan(&levelToSearch)
+
+	courseToSearch := prefixToSearch + " " + levelToSearch;
+
+	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
+	rows, err := db.Query(query, courseToSearch + "%");
+	if err != nil {
+		fmt.Printf("courseByPrefixAndLevel %q: %v", courseToSearch, err);
+		return;
+	}
+	
+	printCourses(rows);
+}
+
+func searchForOpenCourses(db *sql.DB) {
+	fmt.Println("\nAll Open Courses");
+
+	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE openSeats != '0';";
+	rows, err := db.Query(query);
+	if err != nil {
+		fmt.Printf("openCourses : %v", err);
+		return;
+	}
+	
+	printCourses(rows);
+}
+
+func searchForSpecificCourse(db *sql.DB) {
+	
+}
+
+// user input funcs
+func getUserInput() int {
+	userInput := 1
+
+	for {
+		// bad indentation, but outputs better
+		fmt.Println(`
+	Operations:
+	  1. Display all courses
+	  2. Display all on-campus courses
+	  3. Display all CCO courses
+	  4. Search for courses with a specified prefix, like CSI, GPR, MTH, etc
+	  5. Search for courses with a specified prefix, like CSI, GPR, MTH, etc, and 
+	     specific level, like 1xx, 2xx, etc.
+	  6. Search for all courses with a specific level, like 1xx, 2xx, etc
+	  7. Search for courses that are still open
+	  8. Search for the details for a specific course. And, your system should return all the
+	     information about the course in a nice format.
+	  9. Exit Program
+		`);
+
+		fmt.Print("Enter Operation(1-9): ");
+		fmt.Scan(&userInput);
+
+		if(userInput >= 1 && userInput <= 9) {
+			return userInput;
+		} 
+		
+		fmt.Println("\nInvalid Input! Try Again");
+	}
+}
+
+func handleUserInput(userInput int, db *sql.DB) {
+	switch(userInput) {
+		// All display related operations
+		// decided to make the first 3 displays fall through
+		case 1, 2, 3:
+			displayFallCourses(userInput, db);			
+			break;
+		case 4:
+			searchByCoursePrefix(db);
+			break;
+		case 5:
+			searchByPrefixAndLevel(db);
+			break;
+		case 6:
+			searchByLevel(db);
+			break;
+		case 7:
+			searchForOpenCourses(db);
+			break;
+		case 8:
+			searchForSpecificCourse(db);
+			break;
+		case 9:
+			fmt.Println("\nExiting Program. Goodbye");
+			break;
+		default:
+			break;
+	}
+}
+
 const URL = "https://classlist.champlain.edu/api3/courses/semester/fall/type/all/filter/ug";
 
 func main() {
 	var db *sql.DB;
 	var connected bool = false;
 	var semestersData DataObject;
+	var userInput int;
 	var wg sync.WaitGroup;
 
 	connected, db = connectToADatabase();
@@ -221,7 +385,7 @@ func main() {
 
 	wg.Add(2);
 
-	// Fetching Routine
+	// go routines
 	go func () {
 		defer wg.Done();
 		semestersData = fetchCourseList(URL);
@@ -237,14 +401,9 @@ func main() {
 	// load all data into db
 	loadAllDataToDatabase(semestersData.Items[0], db);
 
-	// for inputIsValid != false {
-
-	// }
-	// getUserInput();
-	// handleUserInput();
-
-	fmt.Println("\nAll Advisor and Their Student Information:");
-	//displayAllRecords(db);
-
-	fmt.Println(semestersData.Items[0].Children[0].Times);
+	fmt.Println("\nWelcome to Fall 2026 Course Management System");
+	for userInput != 9 {
+		userInput = getUserInput();
+		handleUserInput(userInput, db);
+	}
 }
