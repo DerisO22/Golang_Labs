@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -197,7 +200,7 @@ func printCourses(rows *sql.Rows) {
 		return
 	}
 
-	// col headers. but will prob not be seen
+	// col headers. but will prob not be seen if data is too large
 	fmt.Printf("\n%-10s %-8s %-20s %-15s %-25s %-5s\n", "NUMBER", "DAYS", "TIME", "ROOM", "INSTRUCTOR", "SEATS")
 	for _, c := range courses {
 		name := c.Instructor_fname + " " + c.Instructor_lname
@@ -205,25 +208,21 @@ func printCourses(rows *sql.Rows) {
 	}
 }
 
-
 /*
 	All the User Operations
 */
 func displayFallCourses(userInput int, db *sql.DB) error {
-	var query string
+	var query string;
 
 	fmt.Println("\nAll Fall Courses:\n");
 
 	switch(userInput){
 		case 1:
 			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses;"
-			break;
 		case 2:
 			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE courseType = 'Day/Evening';"
-			break;
 		case 3:
 			query = "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE courseType != 'Day/Evening';";
-			break;
 	}
 
 	rows, err := db.Query(query);
@@ -259,7 +258,7 @@ func searchByLevel(db *sql.DB) {
 	fmt.Scan(&levelToSearch)
 
 	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
-	rows, err := db.Query(query, "%-" + levelToSearch + "%");
+	rows, err := db.Query(query, "%" + levelToSearch + "%");
 	if err != nil {
 		fmt.Printf("courseByLevel %q: %v", levelToSearch, err);
 		return;
@@ -269,16 +268,15 @@ func searchByLevel(db *sql.DB) {
 }
 
 func searchByPrefixAndLevel(db *sql.DB) {
-	var prefixToSearch string
-	var levelToSearch string
+	var courseToSearch string
+	reader := bufio.NewReader(os.Stdin);
 
-	fmt.Print("Enter Prefix (e.g. CSI): ")
-	fmt.Scan(&prefixToSearch)
-
-	fmt.Print("Enter Level (e.g. 300): ")
-	fmt.Scan(&levelToSearch)
-
-	courseToSearch := prefixToSearch + " " + levelToSearch;
+	fmt.Print("Enter Course Prefix and Level (e.g CSI 300, MTH 270): ");
+	class, err := reader.ReadString('\n');
+	if err != nil {
+		log.Fatal(err);
+	}
+	courseToSearch = strings.TrimSpace(class);
 
 	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
 	rows, err := db.Query(query, courseToSearch + "%");
@@ -304,7 +302,56 @@ func searchForOpenCourses(db *sql.DB) {
 }
 
 func searchForSpecificCourse(db *sql.DB) {
+	var tmp Course;
+	var courseToSearch string
+	reader := bufio.NewReader(os.Stdin);
+
+	fmt.Print("Enter Course to Search (e.g CSI 230-02, MTH 270-01): ");
+	class, err := reader.ReadString('\n');
+	if err != nil {
+		log.Fatal(err);
+	}
+	courseToSearch = strings.TrimSpace(class);
+
+	query := "SELECT * FROM courses WHERE number = ? LIMIT 1;";
+	row := db.QueryRow(query, courseToSearch);
+	err = row.Scan(&tmp.Number, &tmp.Credit, &tmp.Openseats, &tmp.Days, &tmp.Times, &tmp.Instructor_fname, 
+					&tmp.Instructor_lname, &tmp.Description, &tmp.Room, &tmp.Subject, &tmp.Type, &tmp.Prereq,
+					&tmp.Title, &tmp.Start_date, &tmp.End_date);
 	
+	if err == sql.ErrNoRows {
+		fmt.Printf("Course not found: %v", err);
+		return;
+	} else if err != nil {
+		fmt.Printf("Error: %v", err);
+		return;
+	}
+
+	const courseTemplate = `
+	------ %s ------
+	Course Number: %-20s 
+	Credits:       %-20s
+	Open Seats:    %-20s  
+	Days:          %-20s
+	Times:         %-20s  
+	Room:          %-20s
+	Instructor:    %s %s
+	Subject:       %-20s  
+	Type:          %-20s
+	Title:         %s
+	Description:   %s
+	Prereqs:       %s
+	Dates:         %s to %s
+	`
+	
+	fmt.Printf(courseTemplate, 
+		courseToSearch, tmp.Number, tmp.Credit, 
+		tmp.Openseats, tmp.Days, tmp.Times, tmp.Room,
+		tmp.Instructor_fname, tmp.Instructor_lname,
+		tmp.Subject, tmp.Type, tmp.Title,
+		tmp.Description, tmp.Prereq, 
+		tmp.Start_date, tmp.End_date,
+	)	
 }
 
 // user input funcs
@@ -345,27 +392,18 @@ func handleUserInput(userInput int, db *sql.DB) {
 		// decided to make the first 3 displays fall through
 		case 1, 2, 3:
 			displayFallCourses(userInput, db);			
-			break;
 		case 4:
 			searchByCoursePrefix(db);
-			break;
 		case 5:
 			searchByPrefixAndLevel(db);
-			break;
 		case 6:
 			searchByLevel(db);
-			break;
 		case 7:
 			searchForOpenCourses(db);
-			break;
 		case 8:
 			searchForSpecificCourse(db);
-			break;
 		case 9:
 			fmt.Println("\nExiting Program. Goodbye");
-			break;
-		default:
-			break;
 	}
 }
 
@@ -397,6 +435,10 @@ func main() {
 	}()
 
 	wg.Wait();
+
+	if len(semestersData.Items) == 0 {
+		log.Fatal("No semester data returned");
+	}
 
 	// load all data into db
 	loadAllDataToDatabase(semestersData.Items[0], db);
