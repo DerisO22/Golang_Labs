@@ -204,6 +204,8 @@ func printCourses(rows *sql.Rows) {
 	fmt.Printf("\n%-10s %-8s %-20s %-15s %-25s %-5s\n", "NUMBER", "DAYS", "TIME", "ROOM", "INSTRUCTOR", "SEATS")
 	for _, c := range courses {
 		name := c.Instructor_fname + " " + c.Instructor_lname
+
+		// *** Printing things out based on their varchar sizes overflowed terminal on my laptop, so just abritary vals***
 		fmt.Printf("%-10s %-8s %-20s %-15s %-25s %-5s\n", c.Number, c.Days, c.Times, c.Room, name, c.Openseats)
 	}
 }
