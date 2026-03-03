@@ -1,5 +1,30 @@
 package main
 
+/*
+Author:                   Deris C. O’Malley
+Class:                    CSI-380-01
+Assignment:               Go Final Project
+Date Assigned:            23, February
+Due Date:                 2, March, 11:59 PM
+
+Description:
+This program runs 2 goroutines that fetch data from the champlain college course list api
+and creates a database with a table for storing courses. Those fetched Fall Semester courses
+are then stored into the database. The user is given 8 different ways to view courses
+in that database.
+
+Certification of Authenticity:
+I certify that this is entirely my own work,except where I have given fully-documented
+References to the work of others. I understand the definition and consequences of
+Plagiarism and acknowledge that the assessor of this assignment may, for the purpose
+of assessing this assignment:
+-Reproduce this assignment and provide a copy to another member of academic staff;
+and/or
+- Communicate a copy of this assignment to a plagiarism checking service (which
+May then retain a copy of this assignment on its database for the purpose of future
+Plagiarism checking)
+*/
+
 import (
 	"bufio"
 	"database/sql"
@@ -262,7 +287,7 @@ func searchByLevel(db *sql.DB) {
 	fmt.Scan(&levelToSearch)
 
 	query := "SELECT number, days, times, room, instructorFname, instructorLname, openSeats FROM courses WHERE number LIKE ?;";
-	rows, err := db.Query(query, "%" + levelToSearch + "%");
+	rows, err := db.Query(query, "% " + levelToSearch + "%");
 	if err != nil {
 		fmt.Printf("courseByLevel %q: %v", levelToSearch, err);
 		return;
