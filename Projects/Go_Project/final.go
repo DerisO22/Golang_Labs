@@ -53,6 +53,8 @@ type DataObject struct {
 	Items       	[]Semester `json:"items"`
 }
 
+// That topLevel struct was causing issues so deleted it
+
 const USER = "root"
 const PASSWD = "Deris123" // put in your password here
 const DATABASE = "coursesList"
